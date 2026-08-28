@@ -1,0 +1,11 @@
+@import 'tailwindcss';
+
+@theme {
+	--font-sans: 'Zen Maru Gothic';
+}
+
+@layer base {
+	body {
+		@apply bg-gray-950 text-zinc-200;
+	}
+}

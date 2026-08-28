@@ -1,0 +1,1 @@
+cool adalah bukti ありがとう
