@@ -5,7 +5,7 @@ import { importSPKI, jwtVerify } from 'jose';
 import { API_BASE_URL } from '$app/env/public';
 import { redirect } from '@sveltejs/kit';
 
-const AUTH_COOKIE = 'setsubi_a';
+export const AUTH_COOKIE = 'shupa_at';
 const NON_RETRYABLE_ERROR_CODE = ['1001', '1002'];
 
 export const noThrow = <A extends unknown[], R>(fn: (...args: A) => Promise<R>) => {
@@ -25,7 +25,7 @@ export function cn(...inputs: ClassValue[]) {
 const authenticateBase = noThrow(
 	async (isBrowser: boolean, publicKey: string, f: typeof fetch, accessToken?: string) => {
 		let accessTok = accessToken || '';
-		if (!isBrowser && accessTok) {
+		if (!isBrowser && !accessTok) {
 			return accessTok;
 		}
 		if (isBrowser && !accessTok) {
@@ -36,7 +36,6 @@ const authenticateBase = noThrow(
 			let res = await refreshAccessToken(f);
 			let retryCount = 0;
 			while (retryCount < 3 && res.isErr() && res.error.message !== 'not-retry') {
-				console.log('RETRYING - ', retryCount);
 				await new Promise((resolve) => setTimeout(resolve, 1000));
 				res = await refreshAccessToken(f);
 				retryCount += 1;
@@ -53,11 +52,15 @@ export const authenticate = async (
 	isBrowser: boolean,
 	publicKey: string,
 	f: typeof fetch,
+	path: string,
 	accessToken?: string
 ) => {
 	const res = await authenticateBase(isBrowser, publicKey, f, accessToken);
 	if (res.isErr()) {
 		return redirect(307, '/auth/signin');
+	}
+	if (path === '/auth/signin' || path === '/auth/signup') {
+		return redirect(307, '/');
 	}
 	return res.value;
 };
@@ -84,9 +87,15 @@ export const refreshAccessToken = noThrow(async (f: typeof fetch) => {
 	});
 	if (!res.ok) {
 		const err = await res.json();
-		if (!NON_RETRYABLE_ERROR_CODE.includes(err?.code)) {
+		if (!NON_RETRYABLE_ERROR_CODE.includes(err?.error)) {
 			throw new Error('retry');
 		}
 		throw new Error('not-retry');
 	}
 });
+
+export const getFecthHeaders = (accessToken: string) => {
+	return {
+		Authorization: `Bearer ${accessToken}`
+	};
+};
